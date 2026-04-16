@@ -90,4 +90,3 @@ $results = $wpdb->get_results("SELECT ID, post_title FROM {$wpdb->posts}");
 
 // prepare use for prevent sql injection
 $wpdb->prepare("SELECT * FROM {$wpdb->users} WHERE ID = %d", $user_id);
-
