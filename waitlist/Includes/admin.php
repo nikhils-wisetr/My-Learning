@@ -47,30 +47,22 @@ class WL_Admin extends WP_List_Table {
         ];
     }
     public function prepare_items() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'waitlist';
         $per_page = 10;
         $current_page = $this->get_pagenum();
+        $offset = ($current_page - 1) * $per_page;
         $status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $url = add_query_arg([
-            'per_page' => $per_page,
-            'page'     => $current_page,
-            'status'   => $status,
-        ], rest_url('waitlist/v1/entries'));
-
-        $response = wp_remote_get($url);
-        $body = [];
-        if (!is_wp_error($response)) {
-            $body = json_decode(wp_remote_retrieve_body($response), true);
-        }else{
-            error_log('API Error: Status Code ' . wp_remote_retrieve_response_code($response));
-            return new WP_Error(
-                'api_failed',
-                'Failed to fetch data',
-                ['status' => 500]
-            );
+        $query = "SELECT * FROM {$table}";
+        $count_query = "SELECT COUNT(*) FROM {$table}";
+        if (!empty($status)) {
+            $query       .= $wpdb->prepare(" WHERE status = %s", $status);
+            $count_query .= $wpdb->prepare(" WHERE status = %s", $status);
         }
-        $this->items = $body['data'];
-        $total_items = $body['total'];
-
+        $query .= $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
+        $items = $wpdb->get_results($query, ARRAY_A);
+        $total_items = (int) $wpdb->get_var($count_query);
+        $this->items = $items;
         $this->set_pagination_args([
             'total_items' => $total_items,
             'per_page'    => $per_page,
@@ -101,7 +93,6 @@ class WL_Admin extends WP_List_Table {
             add_query_arg('status', 'removed', $base_url),
             $current === 'removed' ? ' class="current"' : ''
         );
-
         return $views;
     }
 }
