@@ -2,6 +2,12 @@
 /**
  * Plugin Name: Waitlist System
  * Text Domain: waitlist
+ * Description: A simple waitlist system for WooCommerce.
+ * version: 1.0.0
+ * Author: Funnel Development Team
+ * Author URI: https://funnel.dev
+ * License: GPL2
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html   
  */
 
 if (!defined('ABSPATH')) exit;
@@ -26,7 +32,6 @@ foreach ([
 add_action('plugins_loaded', function(){
     WL_DB::init();
     WL_Admin::init();
-    WL_REST::init();
     WL_AJAX::init();
     WL_Cron::init();
     WL_WC::init();

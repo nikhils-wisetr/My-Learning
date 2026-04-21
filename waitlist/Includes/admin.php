@@ -29,16 +29,17 @@ class WL_Admin extends WP_List_Table {
     }
 
     public static function render(){
-        echo '<div class="wrap"><h1>'.__('Waitlist' , 'waitlist').'</h1>';
-        $instance = new self(); 
-        $instance->prepare_items();
-        $instance->views();
-        $instance->display();
+        echo '<div class="wrap"><h1>' . esc_html__( 'Waitlist', 'waitlist' ) . '</h1>';
+            $instance = new self(); 
+            $instance->prepare_items();
+            $instance->views();
+            $instance->display();
         echo '</div>';
     }
     public function get_columns() {
         return [
             'id' => 'ID',
+            'user_id' => 'User ID',
             'email' => 'Email',
             'product_id' => 'Product',
             'status' => 'Status',

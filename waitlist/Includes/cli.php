@@ -28,17 +28,18 @@ class WL_CLI {
             global $wpdb;
             $days = $assoc['days'] ?? 90;
             $dry  = isset($assoc['dry-run']);
-
-            $query = "DELETE FROM {$wpdb->prefix}waitlist 
-                      WHERE added_at < NOW() - INTERVAL %d DAY";
-
-            if($dry){
-                WP_CLI::success("Dry run complete");
+            $table = $wpdb->prefix . 'waitlist';
+            $count = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table} 
+                    WHERE added_at < NOW() - INTERVAL %d DAY",
+                    $days
+                )
+            );
+            if ( $dry ) {
+                WP_CLI::success( "Dry run: {$count} rows would be deleted." );
                 return;
             }
-
-            $wpdb->query($wpdb->prepare($query,$days));
-
             WP_CLI::success("Pruned");
         });
     }
