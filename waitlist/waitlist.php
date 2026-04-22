@@ -18,14 +18,14 @@ define('WL_URL', plugin_dir_url(__FILE__));
 foreach ([
     'db',
     'admin',
-    'rest',
     'ajax',
     'cron',
     'cli',
     'woocommerce'
 ] as $file) {
-    if( file_exists(WL_PATH . "includes/{$file}.php") ){
-        require_once WL_PATH . "includes/{$file}.php";
+    $path = WL_PATH . "includes/{$file}.php";
+    if ( file_exists( $path ) ) {
+        require_once $path;
     }
 }
 

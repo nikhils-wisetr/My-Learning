@@ -3,44 +3,56 @@ class WL_CLI {
 
     public static function init(){
 
-        WP_CLI::add_command('waitlist export',function($args,$assoc){
+        WP_CLI::add_command( 'waitlist export', function ( $args, $assoc ) {
 
             global $wpdb;
-            $table = $wpdb->prefix.'waitlist';
+            $table = $wpdb->prefix . 'waitlist';
+            $rows  = $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A );
 
-            $rows = $wpdb->get_results("SELECT * FROM {$table}",ARRAY_A);
-
-            $format = $assoc['format'] ?? 'table';
-            if($format==='json'){
-                WP_CLI::print_value($rows);
-            } elseif($format==='csv'){
-                foreach($rows as $r){
-                    WP_CLI::line(implode(',',$r));
-                }
-            } else {
-                \WP_CLI\Utils\format_items('table',$rows,array_keys($rows[0]));
+            if ( empty( $rows ) ) {
+                WP_CLI::warning( 'No waitlist entries found.' );
+                return;
             }
 
-        });
+            $format  = $assoc['format'] ?? 'table';
+            $columns = array_keys( $rows[0] );
 
-        WP_CLI::add_command('waitlist prune',function($args,$assoc){
+            if ( $format === 'json' ) {
+                WP_CLI::print_value( $rows, [ 'format' => 'json' ] );
+            } elseif ( $format === 'csv' ) {
+                \WP_CLI\Utils\format_items( 'csv', $rows, $columns );
+            } else {
+                \WP_CLI\Utils\format_items( 'table', $rows, $columns );
+            }
+        } );
+
+        WP_CLI::add_command( 'waitlist prune', function ( $args, $assoc ) {
 
             global $wpdb;
-            $days = $assoc['days'] ?? 90;
-            $dry  = isset($assoc['dry-run']);
+            $days  = isset( $assoc['days'] ) ? absint( $assoc['days'] ) : 90;
+            $dry   = isset( $assoc['dry-run'] );
             $table = $wpdb->prefix . 'waitlist';
-            $count = $wpdb->get_var(
+
+            $count = (int) $wpdb->get_var(
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$table} 
-                    WHERE added_at < NOW() - INTERVAL %d DAY",
+                    "SELECT COUNT(*) FROM {$table} WHERE added_at < NOW() - INTERVAL %d DAY",
                     $days
                 )
             );
+
             if ( $dry ) {
                 WP_CLI::success( "Dry run: {$count} rows would be deleted." );
                 return;
             }
-            WP_CLI::success("Pruned");
-        });
+
+            $deleted = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM {$table} WHERE added_at < NOW() - INTERVAL %d DAY",
+                    $days
+                )
+            );
+
+            WP_CLI::success( sprintf( 'Pruned %d rows.', (int) $deleted ) );
+        } );
     }
 }

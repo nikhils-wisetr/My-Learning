@@ -20,7 +20,7 @@ class WL_Cron {
         $table = $wpdb->prefix.'waitlist';
         $wpdb->query(
             "DELETE FROM {$table} 
-             WHERE added_at < NOW() - INTERVAL 90 DAY"
+            WHERE added_at < NOW() - INTERVAL 90 DAY"
         );
     }
 }

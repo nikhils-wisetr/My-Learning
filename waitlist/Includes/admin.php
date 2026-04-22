@@ -29,12 +29,21 @@ class WL_Admin extends WP_List_Table {
     }
 
     public static function render(){
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'waitlist' ) );
+        }
         echo '<div class="wrap"><h1>' . esc_html__( 'Waitlist', 'waitlist' ) . '</h1>';
-            $instance = new self(); 
+            $instance = new self();
             $instance->prepare_items();
             $instance->views();
             $instance->display();
         echo '</div>';
+    }
+
+    private static function get_status_filter() {
+        $allowed = [ 'active', 'removed' , 'purchased' ];
+        $status  = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
+        return in_array( $status, $allowed, true ) ? $status : '';
     }
     public function get_columns() {
         return [
@@ -48,34 +57,51 @@ class WL_Admin extends WP_List_Table {
         ];
     }
     public function prepare_items() {
-        global $wpdb;
-        $table = $wpdb->prefix . 'waitlist';
-        $per_page = 10;
-        $current_page = $this->get_pagenum();
-        $offset = ($current_page - 1) * $per_page;
-        $status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $query = "SELECT * FROM {$table}";
-        $count_query = "SELECT COUNT(*) FROM {$table}";
-        if (!empty($status)) {
-            $query       .= $wpdb->prepare(" WHERE status = %s", $status);
-            $count_query .= $wpdb->prepare(" WHERE status = %s", $status);
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
         }
-        $query .= $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
-        $items = $wpdb->get_results($query, ARRAY_A);
-        $total_items = (int) $wpdb->get_var($count_query);
+        global $wpdb;
+        $table        = $wpdb->prefix . 'waitlist';
+        $per_page     = 10;
+        $current_page = $this->get_pagenum();
+        $offset       = ( $current_page - 1 ) * $per_page;
+        $status       = self::get_status_filter();
+
+        if ( $status !== '' ) {
+            $items = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT * FROM {$table} WHERE status = %s LIMIT %d OFFSET %d",
+                    $status, $per_page, $offset
+                ),
+                ARRAY_A
+            );
+            $total_items = (int) $wpdb->get_var(
+                $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE status = %s", $status )
+            );
+        } else {
+            $items = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT * FROM {$table} LIMIT %d OFFSET %d",
+                    $per_page, $offset
+                ),
+                ARRAY_A
+            );
+            $total_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+        }
+
         $this->items = $items;
         $this->set_pagination_args([
             'total_items' => $total_items,
             'per_page'    => $per_page,
         ]);
-        $this->_column_headers = [$this->get_columns(), [], []];
+        $this->_column_headers = [ $this->get_columns(), [], [] ];
     }
     public function column_default($item, $column_name) {
         return $item[$column_name] ?? '';
     }
     public function get_views() {
-        $current = $_GET['status'] ?? '';
-        $base_url = admin_url('admin.php?page=waitlist');
+        $current  = self::get_status_filter();
+        $base_url = admin_url( 'admin.php?page=waitlist' );
         $views = [];
         $views['all'] = sprintf(
             '<a href="%s"%s>All</a>',
@@ -87,6 +113,12 @@ class WL_Admin extends WP_List_Table {
             '<a href="%s"%s>Active</a>',
             add_query_arg('status', 'active', $base_url),
             $current === 'active' ? ' class="current"' : ''
+        );
+
+        $views['purchased'] = sprintf(
+            '<a href="%s"%s>Purchased</a>',
+            add_query_arg('status', 'purchased', $base_url),
+            $current === 'purchased' ? ' class="current"' : ''
         );
 
         $views['removed'] = sprintf(
