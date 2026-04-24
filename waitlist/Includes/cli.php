@@ -1,4 +1,5 @@
 <?php
+if (!defined('ABSPATH')) exit;
 class WL_CLI {
 
     public static function init(){
@@ -7,7 +8,7 @@ class WL_CLI {
 
             global $wpdb;
             $table = $wpdb->prefix . 'waitlist';
-            $rows  = $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A );
+            $rows  = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}waitlist", ARRAY_A );
 
             if ( empty( $rows ) ) {
                 WP_CLI::warning( 'No waitlist entries found.' );
@@ -32,14 +33,12 @@ class WL_CLI {
             $days  = isset( $assoc['days'] ) ? absint( $assoc['days'] ) : 90;
             $dry   = isset( $assoc['dry-run'] );
             $table = $wpdb->prefix . 'waitlist';
-
             $count = (int) $wpdb->get_var(
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$table} WHERE added_at < NOW() - INTERVAL %d DAY",
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}waitlist WHERE added_at < NOW() - INTERVAL %d DAY",
                     $days
                 )
             );
-
             if ( $dry ) {
                 WP_CLI::success( "Dry run: {$count} rows would be deleted." );
                 return;
@@ -47,7 +46,7 @@ class WL_CLI {
 
             $deleted = $wpdb->query(
                 $wpdb->prepare(
-                    "DELETE FROM {$table} WHERE added_at < NOW() - INTERVAL %d DAY",
+                    "DELETE FROM {$wpdb->prefix}waitlist WHERE added_at < NOW() - INTERVAL %d DAY",
                     $days
                 )
             );

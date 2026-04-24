@@ -1,4 +1,5 @@
 <?php
+if (!defined('ABSPATH')) exit;
 class WL_Cron {
 
     public static function init(){
@@ -18,8 +19,9 @@ class WL_Cron {
     public static function run(){
         global $wpdb;
         $table = $wpdb->prefix.'waitlist';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->query(
-            "DELETE FROM {$table} 
+            "DELETE FROM {$wpdb->prefix}waitlist 
             WHERE added_at < NOW() - INTERVAL 90 DAY"
         );
     }

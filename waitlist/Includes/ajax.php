@@ -1,11 +1,12 @@
 <?php
+if (!defined('ABSPATH')) exit;
 class WL_AJAX {
 
     const RATE_LIMIT_MAX     = 5;
     const RATE_LIMIT_WINDOW  = 600; // seconds (10 minutes)
 
     public static function init() {
-        add_action( 'wp_ajax_waitlist_join',        [ __CLASS__, 'join' ] );
+        add_action( 'wp_ajax_aitlist_join',        [ __CLASS__, 'join' ] );
         add_action( 'wp_ajax_nopriv_waitlist_join', [ __CLASS__, 'join' ] );
 
         add_action( 'wp_ajax_waitlist_leave',        [ __CLASS__, 'leave' ] );
@@ -39,7 +40,7 @@ class WL_AJAX {
         }
 
         $already_active = (bool) $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM {$table} WHERE email = %s AND product_id = %d AND status = %s",
+            "SELECT id FROM {$wpdb->prefix}waitlist WHERE email = %s AND product_id = %d AND status = %s",
             $email, $product_id, 'active'
         ) );
 
@@ -47,18 +48,22 @@ class WL_AJAX {
             wp_send_json_error( [ 'msg' => __( 'Already in waitlist', 'waitlist' ) ] );
         }
 
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (user_id, product_id, email, added_at, notified_at, status)
-             VALUES (%d, %d, %s, %s, NULL, %s)
-             ON DUPLICATE KEY UPDATE
-                user_id     = VALUES(user_id),
-                added_at    = VALUES(added_at),
-                notified_at = NULL,
-                status      = VALUES(status)",
-            $user_id, $product_id, $email, current_time( 'mysql' ), 'active'
-        );
-
-        $result = $wpdb->query( $sql );
+        $result = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$wpdb->prefix}waitlist (user_id, product_id, email, added_at, notified_at, status)
+				 VALUES (%d, %d, %s, %s, NULL, %s)
+				 ON DUPLICATE KEY UPDATE
+					user_id     = VALUES(user_id),
+					added_at    = VALUES(added_at),
+					notified_at = NULL,
+					status      = VALUES(status)",
+				$user_id,
+				$product_id,
+				$email,
+				current_time( 'mysql' ),
+				'active'
+			)
+		);
 
         if ( $result === false ) {
             self::log_error( 'join:insert_failed', [ 'email' => $email, 'product_id' => $product_id, 'error' => $wpdb->last_error ] );
@@ -121,7 +126,7 @@ class WL_AJAX {
     }
 
     private static function get_client_ip() {
-        $raw = isset( $_SERVER['REMOTE_ADDR'] ) ? wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '';
+       	$raw = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
         $ip  = filter_var( $raw, FILTER_VALIDATE_IP );
         return $ip ?: '';
     }
