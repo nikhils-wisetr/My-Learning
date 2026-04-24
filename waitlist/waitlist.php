@@ -15,23 +15,19 @@ if (!defined('ABSPATH')) exit;
 define('WL_PATH', plugin_dir_path(__FILE__));
 define('WL_URL', plugin_dir_url(__FILE__));
 
-function waitlist_load_includes() {
-    foreach ( [
-        'db',
-        'admin',
-        'ajax',
-        'cron',
-        'cli',
-        'woocommerce'
-    ] as $file ) {
-        $path = WL_PATH . "includes/{$file}.php";
-        if ( file_exists( $path ) ) {
-            require_once $path;
-        }
+foreach ([
+    'db',
+    'admin',
+    'ajax',
+    'cron',
+    'cli',
+    'woocommerce'
+] as $file) {
+    $path = WL_PATH . "includes/{$file}.php";
+    if ( file_exists( $path ) ) {
+        require_once $path;
     }
 }
-
-waitlist_load_includes();
 
 add_action('plugins_loaded', function(){
     WL_DB::init();
@@ -51,5 +47,4 @@ register_activation_hook(__FILE__, function(){
 
 register_deactivation_hook(__FILE__, function(){
     WL_Cron::unschedule();
-    WL_DB::uninstall();
 });

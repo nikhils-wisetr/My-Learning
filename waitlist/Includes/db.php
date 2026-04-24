@@ -1,5 +1,4 @@
 <?php
-if (!defined('ABSPATH')) exit;
 class WL_DB {
 
     const SCHEMA_VERSION = '1.1';
@@ -20,18 +19,15 @@ class WL_DB {
             user_id BIGINT UNSIGNED NULL,
             product_id BIGINT UNSIGNED NOT NULL,
             email VARCHAR(255) NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'active',
             added_at DATETIME NOT NULL,
-            claimed_at DATETIME NULL,
             notified_at DATETIME NULL,
-            retry_count INT UNSIGNED NOT NULL DEFAULT 0,
-            last_error TEXT NULL,
-            PRIMARY KEY (id),
-            KEY email_product_status (email, product_id, status),
-            KEY idx_worker_lookup (status, notified_at, claimed_at),
-            KEY idx_claimed_at (claimed_at),
-            KEY idx_product (product_id),
-            KEY idx_email (email)
+            status VARCHAR(20) NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY email_product (email, product_id),
+            KEY user_id (user_id),
+            KEY product_id (product_id),
+            KEY email (email),
+            KEY status (status)
         ) {$charset};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -54,6 +50,10 @@ class WL_DB {
         self::install();
     }
 
+    /**
+     * Remove duplicate (email, product_id) rows so the new UNIQUE KEY can be added.
+     * Keeps the oldest row per pair.
+     */
     private static function dedupe_before_unique() {
         global $wpdb;
         $table = $wpdb->prefix . 'waitlist';
@@ -63,20 +63,11 @@ class WL_DB {
         }
 
         $wpdb->query(
-            "DELETE t1 FROM {$wpdb->prefix}waitlist t1
-             INNER JOIN {$wpdb->prefix}waitlist t2
+            "DELETE t1 FROM {$table} t1
+             INNER JOIN {$table} t2
              WHERE t1.email = t2.email
                AND t1.product_id = t2.product_id
                AND t1.id > t2.id"
         );
-    }
-
-    public static function uninstall() {
-        delete_option( 'waitlist_schema_version' );
-        wp_clear_scheduled_hook( 'wl_prune' );
-        wp_clear_scheduled_hook( 'waitlist_cron_worker' );
-        global $wpdb;
-        $table = $wpdb->prefix . 'waitlist';
-        $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}waitlist" );
     }
 }

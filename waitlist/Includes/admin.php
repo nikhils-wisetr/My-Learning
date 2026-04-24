@@ -1,5 +1,4 @@
 <?php
-if (!defined('ABSPATH')) exit;
 if (!class_exists('WP_List_Table')) {
     require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
@@ -21,7 +20,7 @@ class WL_Admin extends WP_List_Table {
     }
 
     public static function enqueue($hook){
-        wp_enqueue_script('wl-js', WL_URL.'assets/js/waitlist.js',['jquery'],'1.0.0',true);
+        wp_enqueue_script('wl-js', WL_URL.'assets/js/waitlist.js',['jquery'],null,true);
         wp_localize_script('wl-js','wlData',[
             'ajaxurl'=>admin_url('admin-ajax.php'),
             'nonce'=>wp_create_nonce('waitlist_nonce'),
@@ -43,7 +42,6 @@ class WL_Admin extends WP_List_Table {
 
     private static function get_status_filter() {
         $allowed = [ 'active', 'removed' , 'purchased' ];
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $status  = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
         return in_array( $status, $allowed, true ) ? $status : '';
     }
@@ -72,23 +70,23 @@ class WL_Admin extends WP_List_Table {
         if ( $status !== '' ) {
             $items = $wpdb->get_results(
                 $wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}waitlist WHERE status = %s LIMIT %d OFFSET %d",
+                    "SELECT * FROM {$table} WHERE status = %s LIMIT %d OFFSET %d",
                     $status, $per_page, $offset
                 ),
                 ARRAY_A
             );
             $total_items = (int) $wpdb->get_var(
-                $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}waitlist WHERE status = %s", $status )
+                $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE status = %s", $status )
             );
         } else {
             $items = $wpdb->get_results(
                 $wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}waitlist LIMIT %d OFFSET %d",
+                    "SELECT * FROM {$table} LIMIT %d OFFSET %d",
                     $per_page, $offset
                 ),
                 ARRAY_A
             );
-            $total_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}waitlist" );
+            $total_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
         }
 
         $this->items = $items;
